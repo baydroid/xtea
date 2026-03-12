@@ -2,7 +2,7 @@
 ### It uses the XTEA implementation from mbed TLS (https://tls.mbed.org).
 ### It requires Zig 0.16.* or greater.
 
-If Zig 0.16 is not yet released then use the master branch
+If Zig 0.16 is not yet released then use the master branch.
 
 Install Zig from https://ziglang.org/download/
 
