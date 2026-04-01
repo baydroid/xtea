@@ -140,12 +140,6 @@ fn dispatchKey(cmdTail : []const u8, _ : ?*anyopaque) void
         }
     var keyText : []u8 = undefined;
     _ = nextString(cmdTail, keyBuffer, &keyText);
-    if (keyText.len == 0)
-        {
-        print("ERROR: Zero length key.\n", .{ });
-        keySet = false;
-        return;
-        }
     makeKey16(keyText);
     c.mbedtls_xtea_setup(&xteaContext, &key16[0]);
     keySet = true;
