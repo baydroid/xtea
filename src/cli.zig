@@ -21,6 +21,7 @@
 const std               = @import("std");
 const Allocator         = std.mem.Allocator;
 const Io                = std.Io;
+const Timestamp         = std.Io.Timestamp;
 const b64Encoder        = std.base64.standard.Encoder;
 const b64Decoder        = std.base64.standard.Decoder;
 
@@ -50,14 +51,14 @@ var   keySet           : bool                   = false;
 var   mainLoopRunning  : bool                   = true;
 var   mainDispatcher   : KeywordDispatcher      = undefined;
 var   xteaContext      : c.mbedtls_xtea_context = undefined;
-var   timer            : std.time.Timer         = undefined;
 var   rand64           : [8]u8                  = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+var   lastNow          : i64                    = 0;
+var   startIRand64     : usize                  = 3;
 
 
 
 pub fn init(a : Allocator) void
     {
-    timer = std.time.Timer.start() catch crash(@src(), "");
     allo = a;
     mainDispatcher = KeywordDispatcher.init(a);
     initMainDispatcher();
@@ -70,15 +71,16 @@ pub fn deinit() void
 
 pub fn mainLoop() void
     {
+    lastNow = Timestamp.now(io, Io.Clock.boot).toMilliseconds();
     c.mbedtls_xtea_init(&xteaContext);
     defer c.mbedtls_xtea_free(&xteaContext);
-    print("XTEA A simple file encryption/decryption utility.\nVersion {d}.{d}.{d}, type help or ? for help.\n", .{ common.magorVersion, common.minorVersion, common.bugfixVersion });
+    print("XTEA A simple encryption/decryption utility.\nVersion {d}.{d}.{d}, type help or ? for help.\n", .{ common.magorVersion, common.minorVersion, common.bugfixVersion });
     mainLoopRunning = true;
     while (mainLoopRunning)
         {
-        buildEntropy();
         var cmd : PromptedInput = Console.promptAndGet("xtea> ", 10000);
-        defer Console.freePromptedGet(&cmd);
+        defer Console.freePromptedInput(&cmd);
+        buildEntropy();
         const trimmedCmd : []const u8 = trim(cmd.input);
         if (trimmedCmd.len > 0) mainDispatcher.dispatch(trimmedCmd) catch { };
         }
@@ -87,19 +89,24 @@ pub fn mainLoop() void
 
 fn buildEntropy() void
     {
-    var rawDelta : u64 = timer.lap();
+    const now : i64 = Timestamp.now(io, Io.Clock.boot).toMilliseconds();
+    var rawDelta : i64 = now - lastNow;
+    lastNow = now;
     if (rawDelta == 0) return;
     const delta : [*]u8 = @ptrCast(&rawDelta);
     var iDelta : usize = 0;
-    var iRand64 : usize = 0;
-    while (iRand64 < 8)
+    var iRand64 : usize = startIRand64;
+    startIRand64 = (startIRand64 + 1) % 8;
+    var count : usize = 0;
+    while (count < 8)
         {
         const newByte : u8 = delta[iDelta];
         iDelta = (iDelta + 1) % 8;
         if (newByte != 0)
             {
+            count += 1;
             rand64[iRand64] = rand64[iRand64] ^ newByte;
-            iRand64 += 1;
+            iRand64 = (iRand64 + 1) % 8;
             }
         }
     }
@@ -180,7 +187,7 @@ fn dispatchEncrypt(cmdTail : []const u8, _ : ?*anyopaque) void
         return;
         };
     defer outputFile.close(io);
-    print("Enter the text to be encrypted ending with Ctrl-G followed by enter.\n", .{});
+    print("Enter the text to be encrypted, ending with Ctrl-G followed by enter.\n", .{});
     print("The maximum length allowed is {d} bytes.\n", .{ 8*maxLenDividedBy8 });
     const inputBuffer : []u8 = allo.alloc(u8, 8*maxLenDividedBy8) catch crash(@src(), "");
     defer
@@ -281,7 +288,7 @@ fn dispatchDecrypt(cmdTail : []const u8, _ : ?*anyopaque) void
         }
     if (len == 0 or len == 8)
         {
-        print("\n", .{ });
+        print("0 bytes decrypted from {s}.\n", .{ inputFilename });
         return;
         }
     const inputBuffer : []u8 = allo.alloc(u8, len) catch crash(@src(), "");
@@ -332,6 +339,7 @@ fn dispatchHelp(_ : []const u8, _ : ?*anyopaque) void
         \\
         \\encrypt filename
         \\  Text typed into the terminal is encrypted and written to the named file.
+        \\  The encrypted form is saved as text (base64) and so can be emailed, etc.
         \\
         \\decrypt filename
         \\  Text in the named file is decrypted and written to the terminal.

@@ -74,7 +74,7 @@ pub fn promptAndGet(prompt : []const u8, maxLen : usize) PromptedInput
         };
     }
 
-pub fn freePromptedGet(pi : *PromptedInput) void
+pub fn freePromptedInput(pi : *PromptedInput) void
     {
     allocator.?.free(pi.buffer);
     }

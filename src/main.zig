@@ -31,7 +31,7 @@ pub const io        : Io          = ioContext.io();
 
 pub fn main() !void
     {
-    var gpa = std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 20 }){};
+    var gpa = std.heap.DebugAllocator(.{ .stack_trace_frames = 20 }){};
     // var gpa = std.heap.GeneralPurposeAllocator(.{ }){};
     defer std.debug.assert(gpa.deinit() == .ok);
     const allocator = gpa.allocator();

@@ -27,7 +27,7 @@ const stdErr             = Io.File.stderr();
 
 
 pub const magorVersion  : usize = 1;
-pub const minorVersion  : usize = 0;
+pub const minorVersion  : usize = 1;
 pub const bugfixVersion : usize = 0;
 
 

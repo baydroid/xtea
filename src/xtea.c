@@ -19,6 +19,9 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
+// Where a comment days I did this & such it means a modification to the tls.mbed original by baydroid.
+
+
 // #if !defined(MBEDTLS_CONFIG_FILE)
 // #include "mbedtls/config.h"
 // #else
@@ -35,7 +38,7 @@
 static void *memset(void *v, int c, size_t n)
     {
     volatile unsigned char *p = v;
-    while( n-- ) *p++ = c;
+    while (n--) *p++ = c;
     return v;
     }
 static void *memcpy(void *dest, const void *src, size_t n)
@@ -131,7 +134,7 @@ int mbedtls_xtea_crypt_ecb( mbedtls_xtea_context *ctx, int mode,
     {
         uint32_t sum = 0, delta = 0x9E3779B9;
 
-        for( i = 0; i < 32; i++ )
+        for( i = 0; i < 64; i++ ) // I changed it from 32 rounds to 64.
         {
             v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + k[sum & 3]);
             sum += delta;
@@ -140,9 +143,9 @@ int mbedtls_xtea_crypt_ecb( mbedtls_xtea_context *ctx, int mode,
     }
     else /* MBEDTLS_XTEA_DECRYPT */
     {
-        uint32_t delta = 0x9E3779B9, sum = delta * 32;
+        uint32_t delta = 0x9E3779B9, sum = delta * 64; // I changed it from 32 rounds to 64.
 
-        for( i = 0; i < 32; i++ )
+        for( i = 0; i < 64; i++ ) // I changed it from 32 rounds to 64.
         {
             v1 -= (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + k[(sum>>11) & 3]);
             sum -= delta;
@@ -172,9 +175,9 @@ int mbedtls_xtea_crypt_cbc( mbedtls_xtea_context *ctx, int mode, size_t length,
 
     if( mode == MBEDTLS_XTEA_DECRYPT )
     {
-        memcpy( iv, input, 8 ); // I added this line to make CBC work correctly.
-        input  += 8; // I added this line to make CBC work correctly.
-        length -= 8; // I added this line to make CBC work correctly.
+        memcpy( iv, input, 8 ); // I added this line to include the IV in the first decryption block.
+        input  += 8; // I added this line to include the IV in the first decryption block.
+        length -= 8; // I added this line to include the IV in the first decryption block.
         while( length > 0 )
         {
             memcpy( temp, input, 8 );
@@ -192,8 +195,8 @@ int mbedtls_xtea_crypt_cbc( mbedtls_xtea_context *ctx, int mode, size_t length,
     }
     else
     {
-        memcpy(output, iv, 8 ); // I added this line to make CBC work correctly.
-        output += 8; // I added this line to make CBC work correctly.
+        memcpy(output, iv, 8 ); // I added this line to get the IV from the first decryption block.
+        output += 8; // I added this line to get the IV from the first decryption block.
         while( length > 0 )
         {
             for( i = 0; i < 8; i++ )
